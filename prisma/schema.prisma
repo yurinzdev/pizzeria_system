@@ -1,0 +1,71 @@
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// CRM Data (Guest)
+model Guest {
+  id            String   @id @default(cuid())
+  roomNumber    String?  @unique
+  name          String
+  allergies     String? // Comma separated list or JSON string
+  notes         String? // "Likes window seat", etc.
+  visitCount    Int      @default(0)
+  lastVisit     DateTime?
+  
+  reservations  Reservation[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// Restaurant Tables
+model Table {
+  id        String   @id @default(cuid())
+  number    Int      @unique
+  capacity  Int
+  status    String   @default("AVAILABLE") // AVAILABLE, RESERVED, OCCUPIED
+  
+  reservations Reservation[]
+}
+
+// Menu Management
+model MenuItem {
+  id          String  @id @default(cuid())
+  name        String
+  price       Int
+  description String?
+  allergens   String? // JSON or comma separated: "WHEAT,DAIRY"
+  isSoldOut   Boolean @default(false)
+  prepTime    Int     @default(15) // Minutes
+}
+
+// Reservations
+model Reservation {
+  id              Int      @id @default(autoincrement())
+  
+  guestId         String?
+  guest           Guest?   @relation(fields: [guestId], references: [id])
+  guestName       String   // Snapshot in case guest record changes or for non-room guests
+  
+  tableId         String?
+  table           Table?   @relation(fields: [tableId], references: [id])
+  
+  time            DateTime
+  partySize       Int      // Total
+  adults          Int
+  children        Int      @default(0)
+  
+  status          String   @default("PENDING") // PENDING, CONFIRMED, SEATED, COMPLETED, CANCELLED
+  
+  orderDetails    String?  // JSON string of items ordered
+  specialRequests String?  // "Window seat", "Birthday"
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
