@@ -1,4 +1,3 @@
-
 name: Deploy to Cloud Run
 
 on:
@@ -6,20 +5,17 @@ on:
     branches: [main, develop]
 
 env:
-  PROJECT_ID: your-gcp-project-id # TODO: Change this to your actual GCP Project ID
-  REGION: asia-northeast1 # Tokyo Region
+  # GitHub Secrets に登録した値を自動で使います
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: asia-northeast1
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: 'read'
-      id-token: 'write' # Required for Workload Identity Federation (if used in future)
-
     steps:
       - uses: actions/checkout@v4
 
-      # Environment Scoping based on branch
+      # ブランチによって stg と prd を分ける
       - name: Set Environment
         run: |
           if [[ $GITHUB_REF == 'refs/heads/main' ]]; then
@@ -28,33 +24,25 @@ jobs:
             echo "ENV_NAME=stg" >> $GITHUB_ENV
           fi
 
-      # Google Cloud Authentication
-      # Note: Make sure to add GCP_SA_KEY to GitHub Repository Secrets
+      # Google Cloud 認証
       - uses: 'google-github-actions/auth@v2'
         with:
           credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
-      # Build, Push, and Deploy
+      # ビルドとデプロイを一気に行う
       - name: Build and Deploy
         run: |
-          # Use pizzaria-app as base name
           SERVICE_NAME=pizza-app-${{ env.ENV_NAME }}
-          
-          # Configure Docker Client for GCR
-          gcloud auth configure-docker
-
-          # Build and Push Container Image
-          # Uses the optimized Dockerfile at root
           IMAGE_URL=gcr.io/${{ env.PROJECT_ID }}/$SERVICE_NAME:${{ github.sha }}
-          
-          docker build -t $IMAGE_URL .
-          docker push $IMAGE_URL
 
-          # Deploy to Cloud Run
+          # Google Cloud 上でビルドを実行（高速で確実）
+          gcloud builds submit --tag $IMAGE_URL .
+
+          # Cloud Run へデプロイ
           gcloud run deploy $SERVICE_NAME \
             --image $IMAGE_URL \
             --region ${{ env.REGION }} \
             --platform managed \
             --allow-unauthenticated \
             --min-instances 0 \
-            --port 8080
+            --port 3000 # Next.jsのデフォルトに合わせて3000にしていますが、Dockerfileの設定に合わせてください
