@@ -52,7 +52,7 @@ COPY --from=builder /app/.next/static ./.next/static
 
 # Copy the baked database and prisma schema (client needs schema sometimes, or just for clarity)
 # We copy dev.db to a location. Note that standalone build usually doesn't include the DB file.
-COPY --from=builder --chown=nextjs:nodejs /app/dev.db ./dev.db
+COPY --from=builder --chown=nextjs:nodejs /app/prisma/dev.db ./dev.db
 # Prisma client might expect the DB at the configured path
 ENV DATABASE_URL="file:/app/dev.db"
 
