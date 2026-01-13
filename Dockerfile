@@ -18,7 +18,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Generate Prisma Client
-RUN npx prisma generate
+RUN DATABASE_URL="file:./dev.db" npx prisma generate
 
 # Create the SQLite database and seed it during build (Baking data into image)
 # This ensures the app starts with data immediately.
